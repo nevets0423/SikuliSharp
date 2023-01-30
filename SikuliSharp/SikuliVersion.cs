@@ -75,4 +75,27 @@ namespace SikuliSharp
 			throw new NotImplementedException();
 		}
 	}
+
+	public class Sikuli205Version : ISikuliVersion {
+		public string ReadyMarker => null; // "Use exit() or Ctrl-D (i.e. EOF) to exit";
+		public string[] InitialCommands => new[]
+		{
+			"import org.sikuli.script.SikulixForJython",
+			"from sikuli.Sikuli import *"
+		};
+		public string Arguments { get; }
+
+
+		public Sikuli205Version(string apiJar, string jythonJar) {
+			Arguments = string.Format(
+				"-cp \"{0};{1}\" org.python.util.jython -i",
+				apiJar,
+				jythonJar
+			);
+		}
+
+		public ISikuliVersion WithProject(string projectPath, string args) {
+			throw new NotImplementedException();
+		}
+	}
 }

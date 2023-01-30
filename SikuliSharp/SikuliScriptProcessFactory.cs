@@ -30,6 +30,8 @@ namespace SikuliSharp
 				return new Sikuli110Version(Path.Combine(sikuliHome, "sikulix.jar"));
 			if (jarFilenames.Contains("sikulixapi.jar") && jarFilenames.Contains("jython-standalone-2.7.1.jar"))
 				return new Sikuli114Version(Path.Combine(sikuliHome, "sikulixapi.jar"), Path.Combine(sikuliHome, "jython-standalone-2.7.1.jar"));
+			if (jarFilenames.Contains("sikulixide-2.0.5-win.jar") && jarFilenames.Contains("jython-standalone-2.7.1.jar"))
+				return new Sikuli205Version(Path.Combine(sikuliHome, "sikulixide-2.0.5-win.jar"), Path.Combine(sikuliHome, "jython-standalone-2.7.1.jar"));
 			throw new NotSupportedException(string.Format("Could not find a known Sikuli version in SIKULI_HOME: \"{0}\"", sikuliHome));
 		}
 
@@ -40,7 +42,7 @@ namespace SikuliSharp
 #if (DEBUG)
 			Debug.WriteLine("Launching Sikuli: \"" + javaPath + "\" " + version.Arguments);
 #endif
-
+		
 			var process = new Process
 			{
 				StartInfo =
