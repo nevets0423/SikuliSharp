@@ -77,7 +77,7 @@ namespace SikuliSharp
 	}
 
 	public class Sikuli205Version : ISikuliVersion {
-		public string ReadyMarker => null; // "Use exit() or Ctrl-D (i.e. EOF) to exit";
+		public string ReadyMarker => "Type \"help\", \"copyright\", \"credits\" or \"license\" for more information.";
 		public string[] InitialCommands => new[]
 		{
 			"import org.sikuli.script.SikulixForJython",
