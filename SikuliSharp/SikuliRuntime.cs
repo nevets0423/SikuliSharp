@@ -1,57 +1,53 @@
 using System;
 using System.Diagnostics;
 
-namespace SikuliSharp
-{
-	public interface ISikuliRuntime : IDisposable
-	{
+namespace SikuliSharp {
+	public interface ISikuliRuntime : IDisposable {
 		void Start();
 		void Stop(bool ignoreErrors = false);
 		string Run(string command, string resultPrefix, double timeoutInSeconds);
 	}
 
-	public class SikuliRuntime : ISikuliRuntime
-	{
+	public class SikuliRuntime : ISikuliRuntime {
 		private readonly IAsyncDuplexStreamsHandlerFactory _asyncDuplexStreamsHandlerFactory;
 		private ISikuliVersion _version;
 		private Process _process;
 		private IAsyncTwoWayStreamsHandler _asyncTwoWayStreamsHandler;
 		private readonly ISikuliScriptProcessFactory _sikuliScriptProcessFactory;
 
-		private const string ErrorMarker = "[error]";
 		private const string ExitCommand = "exit()";
 		private const int SikuliReadyTimeoutSeconds = 30;
 
-		public SikuliRuntime(IAsyncDuplexStreamsHandlerFactory asyncDuplexStreamsHandlerFactory, ISikuliScriptProcessFactory sikuliScriptProcessFactory)
-		{
-			if (asyncDuplexStreamsHandlerFactory == null) throw new ArgumentNullException("asyncDuplexStreamsHandlerFactory");
-			if (sikuliScriptProcessFactory == null) throw new ArgumentNullException("sikuliScriptProcessFactory");
+		public SikuliRuntime(IAsyncDuplexStreamsHandlerFactory asyncDuplexStreamsHandlerFactory, ISikuliScriptProcessFactory sikuliScriptProcessFactory) {
+			if (asyncDuplexStreamsHandlerFactory == null)
+				throw new ArgumentNullException("asyncDuplexStreamsHandlerFactory");
+			if (sikuliScriptProcessFactory == null)
+				throw new ArgumentNullException("sikuliScriptProcessFactory");
 			_asyncDuplexStreamsHandlerFactory = asyncDuplexStreamsHandlerFactory;
 			_sikuliScriptProcessFactory = sikuliScriptProcessFactory;
 		}
 
-		public void Start()
-		{
-			if (_process != null) throw new InvalidOperationException("This Sikuli session has already been started");
+		public void Start() {
+			if (_process != null)
+				throw new InvalidOperationException("This Sikuli session has already been started");
 
 			_version = _sikuliScriptProcessFactory.GetSikuliVersion();
 			_process = _sikuliScriptProcessFactory.Start(_version);
 
 			_asyncTwoWayStreamsHandler = _asyncDuplexStreamsHandlerFactory.Create(_process.StandardOutput, _process.StandardError, _process.StandardInput);
-			if(_version.ReadyMarker != null)
+			if (_version.ReadyMarker != null)
 				_asyncTwoWayStreamsHandler.ReadUntil(SikuliReadyTimeoutSeconds, _version.ReadyMarker);
 			foreach (var command in _version.InitialCommands ?? new string[0])
 				_asyncTwoWayStreamsHandler.WriteLine(command);
 		}
 
-		public void Stop(bool ignoreErrors = false)
-		{
-			if (_process == null) return;
+		public void Stop(bool ignoreErrors = false) {
+			if (_process == null)
+				return;
 
 			_asyncTwoWayStreamsHandler.WriteLine(ExitCommand);
 
-			if (!_process.HasExited)
-			{
+			if (!_process.HasExited) {
 				if (!_process.WaitForExit(500))
 					_process.Kill();
 			}
@@ -71,22 +67,20 @@ namespace SikuliSharp
 				throw new SikuliException("Sikuli Errors: " + errors);
 		}
 
-		public string Run(string command, string resultPrefix, double timeoutInSeconds)
-		{
-			if(_process == null || _process.HasExited)
+		public string Run(string command, string resultPrefix, double timeoutInSeconds) {
+			if (_process == null || _process.HasExited)
 				throw new InvalidOperationException("The Sikuli process is not running");
 
-			#if(DEBUG)
+#if (DEBUG)
 			Debug.WriteLine(command);
-			#endif
+#endif
 			_asyncTwoWayStreamsHandler.WriteLine(command);
 			_asyncTwoWayStreamsHandler.WriteLine("");
 			_asyncTwoWayStreamsHandler.WriteLine("");
 
-			var result = _asyncTwoWayStreamsHandler.ReadUntil(timeoutInSeconds, ErrorMarker, resultPrefix);
+			var result = _asyncTwoWayStreamsHandler.ReadUntil(timeoutInSeconds, KeyWords.ErrorMarker, resultPrefix);
 
-			if (result.IndexOf(ErrorMarker, StringComparison.Ordinal) > -1)
-			{
+			if (result.IndexOf(KeyWords.ErrorMarker, StringComparison.Ordinal) > -1) {
 				result = result + Environment.NewLine + string.Join(Environment.NewLine, _asyncTwoWayStreamsHandler.ReadUpToNow(0.1d));
 				if (result.Contains("FindFailed"))
 					throw new SikuliFindFailedException(result);
@@ -96,8 +90,7 @@ namespace SikuliSharp
 			return result;
 		}
 
-		public void Dispose()
-		{
+		public void Dispose() {
 			Stop(true);
 		}
 	}
