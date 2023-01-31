@@ -1,105 +1,104 @@
 using System;
 using System.Globalization;
 using System.IO;
+using System.Text.RegularExpressions;
 
-namespace SikuliSharp
-{
-	public class Patterns
-	{
+namespace SikuliSharp {
+	public class Patterns {
+		private static readonly Regex MatchRegex = new Regex(@"P\((.*)\) S: (.*?) (?:T: (\d*),(\d*))", RegexOptions.Compiled);
 		public const float DefaultSimilarity = 0.7f;
 
-		public static IPattern FromFile(string path, float similarity = DefaultSimilarity)
-		{
+		public static IPattern FromFile(string path, float similarity = DefaultSimilarity) {
 			return new FilePattern(path, similarity);
 		}
 
-		public static IPattern Location(int x, int y)
-		{
+		public static IPattern Location(int x, int y) {
 			return new Location(x, y);
+		}
+
+		public static IPattern FromText(string patternString) {
+			var pattern = MatchRegex.Match(patternString);
+			var filePattern = new FilePattern(pattern.Groups[1].ToString(), float.Parse(pattern.Groups[2].ToString()));
+			if(pattern.Groups[3].ToString() == string.Empty) {
+				return filePattern;
+			}
+
+			var x = int.Parse(pattern.Groups[3].ToString());
+			var y = pattern.Groups[4].ToString() == string.Empty ? 0 : int.Parse(pattern.Groups[4].ToString());
+			return new WithOffsetPattern(filePattern, new Point(x, y));
 		}
 	}
 
-	public interface IPattern
-	{
+	public interface IPattern {
 		void Validate();
 		string ToSikuliScript();
 	}
 
-	public class FilePattern : IPattern
-	{
+	public class FilePattern : IPattern {
 		private readonly string _path;
 		private readonly float _similarity;
 
-		public FilePattern(string path, float similarity)
-		{
-			if (path == null) throw new ArgumentNullException(nameof(path));
-			if (similarity < 0 || similarity > 1) throw new ArgumentOutOfRangeException(nameof(similarity), similarity, "similarity must be between 0 and 1");
+		public FilePattern(string path, float similarity) {
+			if (path == null)
+				throw new ArgumentNullException(nameof(path));
+			if (similarity < 0 || similarity > 1)
+				throw new ArgumentOutOfRangeException(nameof(similarity), similarity, "similarity must be between 0 and 1");
 
 			_path = path;
 			_similarity = similarity;
 		}
 
-		public void Validate()
-		{
+		public void Validate() {
 			if (!File.Exists(_path))
 				throw new FileNotFoundException("Could not find image file specified in pattern: " + _path, _path);
 		}
 
-		public string ToSikuliScript()
-		{
+		public string ToSikuliScript() {
 			return string.Format(NumberFormatInfo.InvariantInfo, "Pattern(\"{0}\").similar({1})", _path.Replace(@"\", @"\\"), _similarity);
 		}
 	}
 
-	public class WithOffsetPattern : IPattern
-	{
+	public class WithOffsetPattern : IPattern {
 		private readonly IPattern _pattern;
 		private readonly Point _offset;
 
-		public WithOffsetPattern(IPattern pattern, Point offset)
-		{
-			if (pattern == null) throw new ArgumentNullException(nameof(pattern));
+		public WithOffsetPattern(IPattern pattern, Point offset) {
+			if (pattern == null)
+				throw new ArgumentNullException(nameof(pattern));
 			_pattern = pattern;
 			_offset = offset;
 		}
 
-		public void Validate()
-		{
-			if(_pattern is WithOffsetPattern)
+		public void Validate() {
+			if (_pattern is WithOffsetPattern)
 				throw new Exception("Cannot use WithOffsetPattern with itself");
 
 			_pattern.Validate();
 		}
 
-		public string ToSikuliScript()
-		{
+		public string ToSikuliScript() {
 			return $"{_pattern.ToSikuliScript()}.targetOffset({_offset.X}, {_offset.Y})";
 		}
 	}
 
-    public class Location : IPattern
-    {
-        private Point _point;
+	public class Location : IPattern {
+		private Point _point;
 
-	    public Location(int x, int y)
-			: this(new Point(x, y))
-		{
+		public Location(int x, int y)
+			: this(new Point(x, y)) {
 		}
 
-        public Location(Point pt)
-        {
-            _point = pt;
-        }
+		public Location(Point pt) {
+			_point = pt;
+		}
 
-	    public void Validate()
-	    {
-		    if(_point.X < 0 || _point.Y < 0)
+		public void Validate() {
+			if (_point.X < 0 || _point.Y < 0)
 				throw new Exception("Cannot target a negative position");
-	    }
+		}
 
-	    public string ToSikuliScript()
-        {
-            return $"Location({_point.X},{_point.Y})";
-        }
-    }
+		public string ToSikuliScript() {
+			return $"Location({_point.X},{_point.Y})";
+		}
+	}
 }
